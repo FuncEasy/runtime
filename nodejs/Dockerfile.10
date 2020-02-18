@@ -1,0 +1,8 @@
+FROM node:10
+ADD controller.js /funceasy_ctrl/
+ADD lib/ /funceasy_ctrl/lib/
+ADD package.json /funceasy_ctrl/
+ADD npm-install.sh /
+WORKDIR /funceasy_ctrl/
+RUN npm install
+CMD ["node", "controller.js"]
