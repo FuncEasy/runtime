@@ -1,8 +1,10 @@
 const lib = require('./moduleTest');
 const _ = require('lodash');
 module.exports = {
-  test: function (event, context) {
-    return lib(12);
+  asyncFunction: async function (event, context) {
+    return await new Promise((res, rej) => {
+      setTimeout(() => res("hit async function"), 2000)
+    });
   },
   foo: function (event, context) {
     return 'foo';

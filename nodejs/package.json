@@ -5,15 +5,18 @@
   "main": "controller.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "export NODE_ENV='dev' && node controller.js"
+    "dev": "export NODE_ENV='dev' && export FUNCTION_MODULE_NAME='index' && node controller.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "koa": "^2.8.2",
     "koa-bodyparser": "^4.2.1",
+    "koa-logger": "^3.2.1",
     "koa-router": "^7.4.0",
     "lodash": "^4.17.15",
-    "prom-client": "^11.5.3"
+    "prom-client": "^11.5.3",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5"
   }
 }

@@ -2,16 +2,18 @@
 const vm = require('vm');
 const path = require('path');
 const libs = require('./lib/libs');
+const DataSourceService = require('./lib/DataSourceService');
 const Module = require('module');
 const client = require('prom-client');
 const Koa = require('koa');
 const bodyParser = require('koa-bodyparser');
+const logger = require('koa-logger');
 const Router = require('koa-router');
 const app = new Koa();
 const router = new Router();
 
 const funcPort = process.env.FUNCTION_PORT || 8080;
-const funcTimeout = process.env.FUNCTION_TIMEOUT || 10;
+const funcTimeout = process.env.FUNCTION_TIMEOUT || 3000;
 const moduleName = process.env.FUNCTION_MODULE_NAME ? process.env.FUNCTION_MODULE_NAME : 'NoFoundName';
 const local = require.main.filename;
 const rootPath = process.env.NODE_ENV === 'dev'
@@ -22,6 +24,12 @@ const libPath = path.join(rootPath, 'node_modules');
 const pkgPath = path.join(rootPath, 'package.json');
 const libDeps = libs.readlibDeps(pkgPath);
 const {durationTimer, errorsCounter, callsCounter} = libs.initObserveStatistics('method', client);
+let DSS = null;
+try {
+  DSS = new DataSourceService();
+} catch (e) {
+  console.log(e)
+}
 async function functionHandle(ctx) {
   let params = {};
   if(ctx.method === 'GET') {
@@ -56,8 +64,8 @@ async function functionHandle(ctx) {
   });
 
   try {
-    script.runInNewContext(sandBox, {
-      timeout: funcTimeout * 1000
+    await script.runInNewContext(sandBox, {
+      timeout: +funcTimeout
     });
   } catch (e) {
     handleError(e, ctx, label, end);
@@ -66,7 +74,7 @@ async function functionHandle(ctx) {
 
 function modRequire(p, funcEnv, ctx, label, end) {
   if(p === '__funcInit') {
-    return (handler) => modExecute(handler, funcEnv, ctx, label, end);
+    return async handler => await modExecute(handler, funcEnv, ctx, label, end);
   }
   else if (libDeps.includes(p)) {
     return require(path.join(libPath, p));
@@ -79,7 +87,7 @@ function modRequire(p, funcEnv, ctx, label, end) {
   }
 }
 
-function modExecute(handler, funcEnv, ctx, label, end) {
+async function modExecute(handler, funcEnv, ctx, label, end) {
   let func = null;
   switch (typeof handler) {
     case 'function':
@@ -93,14 +101,10 @@ function modExecute(handler, funcEnv, ctx, label, end) {
   try {
     const event = {
       data: funcEnv.params,
-      ctx: ctx
+      ctx: ctx,
     };
-    Promise.resolve(func(event, funcEnv.context)).then(res => {
-      ctx.body = res;
-      end();
-    }).catch(err => {
-      handleError(err, ctx, label, end);
-    })
+    if (DSS) event.DSS = DSS;
+    ctx.body = await func(event, funcEnv.context);
   } catch (e) {
     handleError(e, ctx, label, end);
   }
@@ -118,6 +122,7 @@ function handleError(err, ctx, label, endCounter) {
 }
 
 app.use(bodyParser());
+app.use(logger());
 router.get('/metrics', async ctx => {
   ctx.status = 200;
   ctx.contentType = 'application/json; charset=utf-8';
