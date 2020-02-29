@@ -122,7 +122,6 @@ function handleError(err, ctx, label, endCounter) {
 }
 
 app.use(bodyParser());
-app.use(logger());
 router.get('/metrics', async ctx => {
   ctx.status = 200;
   ctx.contentType = 'application/json; charset=utf-8';
@@ -132,7 +131,7 @@ router.get('/health', async ctx => {
   ctx.status = 200;
   ctx.body = 'OK';
 });
-router.all('*', functionHandle);
+router.all('*', logger(), functionHandle);
 app.use(router.routes());
 
 app.listen(funcPort);
