@@ -100,7 +100,7 @@ async function modExecute(handler, funcEnv, ctx, label, end) {
   if (!func) throw new Error(`Unable to load ${handler}`);
   try {
     const event = {
-      data: funcEnv.params,
+      params: funcEnv.params,
       ctx: ctx,
     };
     if (DSS) event.DSS = DSS;
